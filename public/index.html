@@ -490,7 +490,9 @@ function showQuickActions() {
 function addMessage(text, sender) {
   const div = document.createElement('div');
   div.className = `message ${sender}`;
-  div.textContent = text;
+  // Render **bold** and remove other markdown artifacts
+  const safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  div.innerHTML = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
   return div;
