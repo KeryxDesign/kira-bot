@@ -21,6 +21,36 @@ try {
 
 const app = express();
 app.use(express.json());
+
+// Security headers (GDPR + OWASP)
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
+
+// Rate limiting (simple in-memory)
+const rateLimits = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_MAX = 20; // max requests per window
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = rateLimits.get(ip);
+  if (!entry || now - entry.start > RATE_LIMIT_WINDOW) {
+    rateLimits.set(ip, { start: now, count: 1 });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= RATE_LIMIT_MAX;
+}
+
 app.use(express.static(join(__dirname, "public")));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -116,33 +146,50 @@ Va tutto bene? Se confermi, passo le info a Davide che ti ricontattera entro 24 
 
 Aspetta la conferma prima di dire che e stato inviato. Se vogliono modificare qualcosa, aggiorna il riepilogo.`;
 
-// In-memory conversation store (per session)
+// In-memory conversation store with TTL (GDPR: data minimization)
 const conversations = new Map();
+const CONVERSATION_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// Cleanup expired conversations every hour
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, conv] of conversations) {
+    if (now - conv.createdAt > CONVERSATION_TTL) {
+      conversations.delete(id);
+    }
+  }
+}, 60 * 60 * 1000);
 
 app.post("/api/chat", async (req, res) => {
   const { message, sessionId } = req.body;
 
-  if (!conversations.has(sessionId)) {
-    conversations.set(sessionId, []);
+  // Rate limiting
+  const ip = req.ip || req.connection.remoteAddress;
+  if (!checkRateLimit(ip)) {
+    return res.status(429).json({ error: "Troppe richieste. Riprova tra un minuto." });
   }
 
-  const history = conversations.get(sessionId);
-  history.push({ role: "user", content: message });
+  if (!conversations.has(sessionId)) {
+    conversations.set(sessionId, { messages: [], createdAt: Date.now() });
+  }
+
+  const conv = conversations.get(sessionId);
+  conv.messages.push({ role: "user", content: message });
 
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
-      messages: history,
+      messages: conv.messages,
     });
 
     const reply = response.content[0].text;
-    history.push({ role: "assistant", content: reply });
+    conv.messages.push({ role: "assistant", content: reply });
 
     // Keep history manageable (last 40 messages)
-    if (history.length > 40) {
-      history.splice(0, history.length - 40);
+    if (conv.messages.length > 40) {
+      conv.messages.splice(0, conv.messages.length - 40);
     }
 
     res.json({ reply });
@@ -150,6 +197,13 @@ app.post("/api/chat", async (req, res) => {
     console.error("Claude API error:", err.message);
     res.status(500).json({ error: "Something went wrong. Please try again." });
   }
+});
+
+// GDPR: delete conversation data on user request
+app.delete("/api/chat/:sessionId", (req, res) => {
+  const { sessionId } = req.params;
+  conversations.delete(sessionId);
+  res.json({ deleted: true });
 });
 
 const PORT = process.env.PORT || 3456;

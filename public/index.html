@@ -218,6 +218,97 @@
       border-color: var(--accent);
     }
 
+    /* Consent screen */
+    .consent-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .consent-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 32px 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    }
+
+    .consent-card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+
+    .consent-card p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--gray-600);
+      margin-bottom: 16px;
+    }
+
+    .consent-card label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--gray-800);
+      cursor: pointer;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .consent-card input[type="checkbox"] {
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      accent-color: var(--accent);
+    }
+
+    .consent-card a {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    .consent-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-family: inherit;
+    }
+
+    .consent-btn:hover { background: var(--accent-light); }
+    .consent-btn:disabled { background: var(--gray-400); cursor: not-allowed; }
+
+    /* Delete data link */
+    .delete-data {
+      text-align: center;
+      padding: 8px;
+      font-size: 11px;
+    }
+
+    .delete-data a {
+      color: var(--gray-600);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .delete-data a:hover { color: var(--accent); }
+
     /* Responsive */
     @media (min-width: 600px) {
       body {
@@ -232,6 +323,19 @@
   </style>
 </head>
 <body>
+
+  <!-- GDPR Consent Screen -->
+  <div class="consent-overlay" id="consentOverlay">
+    <div class="consent-card">
+      <h2>Prima di iniziare</h2>
+      <p>Kira e un assistente AI che raccoglie alcune informazioni (nome, contatto, tipo di progetto) per permettere a Davide di ricontattarti. I messaggi vengono elaborati tramite l'API di Anthropic (USA) e conservati per massimo 24 ore.</p>
+      <label>
+        <input type="checkbox" id="consentCheck">
+        <span>Ho letto la <a href="https://keryxdesign.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> e acconsento al trattamento dei miei dati personali per la qualificazione della richiesta.</span>
+      </label>
+      <button class="consent-btn" id="consentBtn" disabled>Inizia la chat</button>
+    </div>
+  </div>
 
   <div class="header">
     <div class="header-avatar">K</div>
@@ -249,11 +353,41 @@
     <button id="sendBtn" onclick="send()">&#10148;</button>
   </div>
 
+  <div class="delete-data">
+    <a id="deleteDataBtn">Cancella i miei dati</a>
+  </div>
+
 <script>
 const sessionId = crypto.randomUUID();
 const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('sendBtn');
+
+// GDPR Consent
+const consentOverlay = document.getElementById('consentOverlay');
+const consentCheck = document.getElementById('consentCheck');
+const consentBtn = document.getElementById('consentBtn');
+
+consentCheck.addEventListener('change', () => {
+  consentBtn.disabled = !consentCheck.checked;
+});
+
+consentBtn.addEventListener('click', () => {
+  consentOverlay.style.display = 'none';
+  initChat();
+});
+
+// GDPR Delete data
+document.getElementById('deleteDataBtn').addEventListener('click', async () => {
+  if (!confirm('Vuoi cancellare tutti i dati di questa conversazione?')) return;
+  try {
+    await fetch('/api/chat/' + sessionId, { method: 'DELETE' });
+    chat.innerHTML = '';
+    addMessage('I tuoi dati sono stati cancellati.', 'bot');
+  } catch {
+    addMessage('Errore nella cancellazione. Scrivi a info@keryxdesign.com per richiedere la cancellazione manuale.', 'bot');
+  }
+});
 
 // Auto-resize textarea
 input.addEventListener('input', () => {
@@ -307,7 +441,12 @@ function addMessage(text, sender) {
 async function addBotBubbles(text) {
   const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
   for (let i = 0; i < paragraphs.length; i++) {
-    if (i > 0) await new Promise(r => setTimeout(r, 400));
+    if (i > 0) {
+      showTyping();
+      const delay = Math.min(800 + paragraphs[i].length * 15, 3000);
+      await new Promise(r => setTimeout(r, delay));
+      hideTyping();
+    }
     addMessage(paragraphs[i].trim(), 'bot');
   }
 }
@@ -363,9 +502,11 @@ async function send() {
   input.focus();
 }
 
-// Welcome message + quick action buttons
-addMessage("Ciao! Sono Kira, l'assistente di Keryx Design. Sono qui per capire cosa stai cercando, cosi Davide puo ricontattarti con le informazioni giuste. Ti faro qualche domanda e alla fine potrai rivedere un riepilogo prima che venga inviato. Che tipo di progetto hai in mente?", 'bot');
-showQuickActions();
+function initChat() {
+  addMessage("Ciao! Sono Kira, l'assistente di Keryx Design. Sono qui per capire cosa stai cercando, cosi Davide puo ricontattarti con le informazioni giuste. Ti faro qualche domanda e alla fine potrai rivedere un riepilogo prima che venga inviato. Che tipo di progetto hai in mente?", 'bot');
+  showQuickActions();
+  input.focus();
+}
 </script>
 
 </body>
