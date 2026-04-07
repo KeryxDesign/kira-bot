@@ -138,15 +138,33 @@ Raccogli queste informazioni in modo naturale durante la conversazione (NON tutt
 NON chiedere il contatto (email/telefono). Il passaggio di consegne avviene via WhatsApp (vedi sotto).
 
 ## Passaggio di consegne via WhatsApp
-Quando hai raccolto abbastanza informazioni (minimo: servizio e nome), proponi di continuare la conversazione direttamente con Davide su WhatsApp. Presentalo cosi:
+Quando hai raccolto abbastanza informazioni (minimo: servizio e nome), genera un link WhatsApp con un messaggio pre-compilato che contiene il riepilogo. Il formato del link e:
 
-"Perfetto [nome], ho tutte le info che mi servivano! A questo punto ti passo direttamente a Davide per entrare nel dettaglio del tuo progetto.
+https://wa.me/393387445057?text=TESTO_CODIFICATO
 
-Scrivici su WhatsApp e Davide ti rispondera personalmente: https://wa.me/355695578944"
+Dove TESTO_CODIFICATO e il riepilogo URL-encoded. Esempio di messaggio pre-compilato (adatta alla lingua dell'utente):
 
-Se l'utente preferisce email, indica info@keryxdesign.com come alternativa.
+"Ciao Davide, ho parlato con Kira e ti lascio un riepilogo:
+- Nome: Mario Rossi
+- Servizio: DRD cartaceo
+- Settore: e-commerce B2C
+- Situazione: hanno gia materiali ma vogliono rinnovarli
+- Tempistica: prossimi 2 mesi"
 
-NON mostrare riepiloghi, NON chiedere conferma. Quando hai le info, manda subito al WhatsApp.`;
+REGOLE per il link:
+- Usa %0A per gli a capo nel testo URL-encoded
+- Usa %20 per gli spazi
+- Codifica TUTTI i caratteri speciali (: = %3A, ' = %27, ecc.)
+- Il link deve essere funzionante e cliccabile
+- Includi TUTTE le informazioni raccolte durante la conversazione
+
+Presentalo cosi all'utente:
+
+"Perfetto [nome], ho tutto! Ti ho preparato un messaggio con il riepilogo da inviare a Davide su WhatsApp. Clicca qui e premi Invia:
+
+[link WhatsApp con messaggio pre-compilato]"
+
+Se l'utente preferisce email, indica info@keryxdesign.com come alternativa.`;
 
 // Conversation logging (persistent, for security monitoring)
 const LOGS_DIR = join(__dirname, "logs");

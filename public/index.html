@@ -107,6 +107,16 @@
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
 
+    .message a {
+      color: var(--primary);
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    .message.user a {
+      color: white;
+    }
+
     .message.user {
       background: var(--primary);
       color: white;
@@ -512,9 +522,11 @@ function showQuickActions() {
 function addMessage(text, sender) {
   const div = document.createElement('div');
   div.className = `message ${sender}`;
-  // Render **bold** and remove other markdown artifacts
+  // Render **bold** and auto-link URLs
   const safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  div.innerHTML = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  div.innerHTML = safe
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
   return div;
