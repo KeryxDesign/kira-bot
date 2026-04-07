@@ -393,8 +393,8 @@ const isIT = /^it\b/i.test(navigator.language);
 const t = {
   consentTitle: isIT ? 'Prima di iniziare' : 'Before we start',
   consentText: isIT
-    ? 'Kira e un assistente AI che raccoglie alcune informazioni (nome, contatto, tipo di progetto) per permettere a Davide di ricontattarti. I messaggi vengono elaborati tramite l\'API di Anthropic (USA) e conservati per massimo 24 ore.'
-    : 'Kira is an AI assistant that collects some information (name, contact, project type) so Davide can follow up with you. Messages are processed via the Anthropic API (USA) and stored for a maximum of 24 hours.',
+    ? 'Kira e un assistente AI che ti aiuta a capire quale servizio fa per te e ti mette in contatto con Davide su WhatsApp. I messaggi vengono elaborati tramite l\'API di Anthropic (USA) e conservati per massimo 24 ore.'
+    : 'Kira is an AI assistant that helps you find the right service and connects you with Davide on WhatsApp. Messages are processed via the Anthropic API (USA) and stored for a maximum of 24 hours.',
   consentLabel: isIT
     ? 'Ho letto la <a href="https://keryxdesign.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> e acconsento al trattamento dei miei dati personali per la qualificazione della richiesta.'
     : 'I have read the <a href="https://keryxdesign.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> and consent to the processing of my personal data for request qualification.',
@@ -408,8 +408,8 @@ const t = {
   consentMonitoring: isIT ? 'Le conversazioni vengono monitorate per finalita di sicurezza e prevenzione abusi.' : 'Conversations are monitored for security and abuse prevention purposes.',
   errorMsg: isIT ? 'Mi dispiace, ho un problema di connessione. Riprova o scrivici direttamente a info@keryxdesign.com' : 'Sorry, I\'m having connection issues. Please try again or contact us at info@keryxdesign.com',
   welcome: isIT
-    ? 'Ciao! Sono Kira, l\'assistente di Keryx Design. Sono qui per capire cosa stai cercando, cosi Davide puo ricontattarti con le informazioni giuste. Ti faro qualche domanda e alla fine potrai rivedere un riepilogo prima che venga inviato. Che tipo di progetto hai in mente?'
-    : 'Hi! I\'m Kira, the Keryx Design assistant. I\'m here to understand what you\'re looking for so Davide can follow up with the right information. I\'ll ask you a few questions, and at the end you\'ll be able to review a summary before it\'s sent. What kind of project do you have in mind?',
+    ? 'Ciao! Sono Kira, l\'assistente di Keryx Design. Sono qui per capire cosa stai cercando e metterti in contatto con Davide. Ti faro qualche domanda veloce. Che tipo di progetto hai in mente?'
+    : 'Hi! I\'m Kira, the Keryx Design assistant. I\'m here to understand what you\'re looking for and connect you with Davide. I\'ll ask you a few quick questions. What kind of project do you have in mind?',
 };
 
 const quickActions = isIT ? [
