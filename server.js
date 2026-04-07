@@ -179,6 +179,14 @@ setInterval(() => {
 app.post("/api/chat", async (req, res) => {
   const { message, sessionId, lang } = req.body;
 
+  // Basic input validation
+  if (!message || typeof message !== "string" || !sessionId || typeof sessionId !== "string") {
+    return res.status(400).json({ error: "Invalid request" });
+  }
+  if (message.length > 2000) {
+    return res.status(400).json({ error: "Message too long" });
+  }
+
   // Rate limiting
   const ip = req.ip || req.connection.remoteAddress;
   if (!checkRateLimit(ip)) {

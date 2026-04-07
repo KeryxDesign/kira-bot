@@ -272,6 +272,16 @@
       accent-color: var(--accent);
     }
 
+    .consent-monitoring {
+      font-size: 12px;
+      color: var(--gray-600);
+      background: var(--gray-100);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      margin-bottom: 16px;
+    }
+
     .consent-card a {
       color: var(--accent);
       text-decoration: underline;
@@ -337,12 +347,15 @@
   <!-- GDPR Consent Screen -->
   <div class="consent-overlay" id="consentOverlay">
     <div class="consent-card">
-      <h2>Prima di iniziare</h2>
-      <p>Kira e un assistente AI che raccoglie alcune informazioni (nome, contatto, tipo di progetto) per permettere a Davide di ricontattarti. I messaggi vengono elaborati tramite l'API di Anthropic (USA) e conservati per massimo 24 ore.</p>
+      <h2 id="consentTitle">Prima di iniziare</h2>
+      <p id="consentText">Kira e un assistente AI che raccoglie alcune informazioni (nome, contatto, tipo di progetto) per permettere a Davide di ricontattarti. I messaggi vengono elaborati tramite l'API di Anthropic (USA) e conservati per massimo 24 ore.</p>
+      <p id="consentMonitoring" class="consent-monitoring">Le conversazioni vengono monitorate per finalita di sicurezza e prevenzione abusi.</p>
       <label>
         <input type="checkbox" id="consentCheck">
-        <span>Ho letto la <a href="https://keryxdesign.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> e acconsento al trattamento dei miei dati personali per la qualificazione della richiesta.</span>
+        <span id="consentLabelText">Ho letto la <a href="https://keryxdesign.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> e acconsento al trattamento dei miei dati personali per la qualificazione della richiesta.</span>
       </label>
+      <!-- Honeypot: hidden field that bots fill but humans don't -->
+      <input type="text" id="website" name="website" autocomplete="off" tabindex="-1" style="position:absolute;left:-9999px;opacity:0;height:0;width:0;">
       <button class="consent-btn" id="consentBtn" disabled>Inizia la chat</button>
     </div>
   </div>
@@ -392,6 +405,7 @@ const t = {
   deleteConfirm: isIT ? 'Vuoi cancellare tutti i dati di questa conversazione?' : 'Do you want to delete all data from this conversation?',
   deleteSuccess: isIT ? 'I tuoi dati sono stati cancellati.' : 'Your data has been deleted.',
   deleteError: isIT ? 'Errore nella cancellazione. Scrivi a info@keryxdesign.com per richiedere la cancellazione manuale.' : 'Deletion error. Contact info@keryxdesign.com to request manual deletion.',
+  consentMonitoring: isIT ? 'Le conversazioni vengono monitorate per finalita di sicurezza e prevenzione abusi.' : 'Conversations are monitored for security and abuse prevention purposes.',
   errorMsg: isIT ? 'Mi dispiace, ho un problema di connessione. Riprova o scrivici direttamente a info@keryxdesign.com' : 'Sorry, I\'m having connection issues. Please try again or contact us at info@keryxdesign.com',
   welcome: isIT
     ? 'Ciao! Sono Kira, l\'assistente di Keryx Design. Sono qui per capire cosa stai cercando, cosi Davide puo ricontattarti con le informazioni giuste. Ti faro qualche domanda e alla fine potrai rivedere un riepilogo prima che venga inviato. Che tipo di progetto hai in mente?'
@@ -420,7 +434,11 @@ document.getElementById('consentBtn').textContent = t.consentBtn;
 document.querySelector('.ai-disclosure').textContent = t.aiDisclosure;
 document.getElementById('input').placeholder = t.placeholder;
 document.getElementById('deleteDataBtn').textContent = t.deleteData;
+document.getElementById('consentMonitoring').textContent = t.consentMonitoring;
 document.documentElement.lang = isIT ? 'it' : 'en';
+
+// Anti-bot: track page load time (bots submit too fast)
+const pageLoadTime = Date.now();
 
 // Detect iframe mode
 if (window.self !== window.top) {
@@ -437,6 +455,10 @@ consentCheck.addEventListener('change', () => {
 });
 
 consentBtn.addEventListener('click', () => {
+  // Anti-bot: honeypot check (bots fill hidden fields)
+  if (document.getElementById('website').value) return;
+  // Anti-bot: timing check (bots submit in < 2 seconds)
+  if (Date.now() - pageLoadTime < 2000) return;
   consentOverlay.style.display = 'none';
   initChat();
 });
