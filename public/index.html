@@ -375,6 +375,53 @@ const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('sendBtn');
 
+// i18n: detect browser language
+const isIT = /^it\b/i.test(navigator.language);
+const t = {
+  consentTitle: isIT ? 'Prima di iniziare' : 'Before we start',
+  consentText: isIT
+    ? 'Kira e un assistente AI che raccoglie alcune informazioni (nome, contatto, tipo di progetto) per permettere a Davide di ricontattarti. I messaggi vengono elaborati tramite l\'API di Anthropic (USA) e conservati per massimo 24 ore.'
+    : 'Kira is an AI assistant that collects some information (name, contact, project type) so Davide can follow up with you. Messages are processed via the Anthropic API (USA) and stored for a maximum of 24 hours.',
+  consentLabel: isIT
+    ? 'Ho letto la <a href="https://keryxdesign.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> e acconsento al trattamento dei miei dati personali per la qualificazione della richiesta.'
+    : 'I have read the <a href="https://keryxdesign.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> and consent to the processing of my personal data for request qualification.',
+  consentBtn: isIT ? 'Inizia la chat' : 'Start chat',
+  aiDisclosure: isIT ? 'Stai parlando con un assistente AI, non con una persona.' : 'You are chatting with an AI assistant, not a human.',
+  placeholder: isIT ? 'Scrivi il tuo messaggio...' : 'Type your message...',
+  deleteData: isIT ? 'Cancella i miei dati' : 'Delete my data',
+  deleteConfirm: isIT ? 'Vuoi cancellare tutti i dati di questa conversazione?' : 'Do you want to delete all data from this conversation?',
+  deleteSuccess: isIT ? 'I tuoi dati sono stati cancellati.' : 'Your data has been deleted.',
+  deleteError: isIT ? 'Errore nella cancellazione. Scrivi a info@keryxdesign.com per richiedere la cancellazione manuale.' : 'Deletion error. Contact info@keryxdesign.com to request manual deletion.',
+  errorMsg: isIT ? 'Mi dispiace, ho un problema di connessione. Riprova o scrivici direttamente a info@keryxdesign.com' : 'Sorry, I\'m having connection issues. Please try again or contact us at info@keryxdesign.com',
+  welcome: isIT
+    ? 'Ciao! Sono Kira, l\'assistente di Keryx Design. Sono qui per capire cosa stai cercando, cosi Davide puo ricontattarti con le informazioni giuste. Ti faro qualche domanda e alla fine potrai rivedere un riepilogo prima che venga inviato. Che tipo di progetto hai in mente?'
+    : 'Hi! I\'m Kira, the Keryx Design assistant. I\'m here to understand what you\'re looking for so Davide can follow up with the right information. I\'ll ask you a few questions, and at the end you\'ll be able to review a summary before it\'s sent. What kind of project do you have in mind?',
+};
+
+const quickActions = isIT ? [
+  { label: 'DRD Cartaceo', msg: 'Mi interessa il Direct Response Design cartaceo' },
+  { label: 'Libro per imprenditori', msg: 'Vorrei capire come funziona il servizio libri' },
+  { label: 'Visual Hammer', msg: 'Cosa fate con il Visual Hammer?' },
+  { label: 'Sito web / Landing page', msg: 'Ho bisogno di un sito o una landing page' },
+  { label: 'Ads design', msg: 'Mi servono creativita per le ads' },
+] : [
+  { label: 'Print DRD', msg: 'I\'m interested in Direct Response Design for print' },
+  { label: 'Book for entrepreneurs', msg: 'I\'d like to know about your book service' },
+  { label: 'Visual Hammer', msg: 'What do you do with Visual Hammer?' },
+  { label: 'Website / Landing page', msg: 'I need a website or landing page' },
+  { label: 'Ads design', msg: 'I need ad creatives' },
+];
+
+// Apply i18n to static HTML elements
+document.querySelector('.consent-card h2').textContent = t.consentTitle;
+document.querySelector('.consent-card p').textContent = t.consentText;
+document.querySelector('.consent-card label span').innerHTML = t.consentLabel;
+document.getElementById('consentBtn').textContent = t.consentBtn;
+document.querySelector('.ai-disclosure').textContent = t.aiDisclosure;
+document.getElementById('input').placeholder = t.placeholder;
+document.getElementById('deleteDataBtn').textContent = t.deleteData;
+document.documentElement.lang = isIT ? 'it' : 'en';
+
 // Detect iframe mode
 if (window.self !== window.top) {
   document.body.classList.add('in-iframe');
@@ -396,13 +443,13 @@ consentBtn.addEventListener('click', () => {
 
 // GDPR Delete data
 document.getElementById('deleteDataBtn').addEventListener('click', async () => {
-  if (!confirm('Vuoi cancellare tutti i dati di questa conversazione?')) return;
+  if (!confirm(t.deleteConfirm)) return;
   try {
     await fetch('/api/chat/' + sessionId, { method: 'DELETE' });
     chat.innerHTML = '';
-    addMessage('I tuoi dati sono stati cancellati.', 'bot');
+    addMessage(t.deleteSuccess, 'bot');
   } catch {
-    addMessage('Errore nella cancellazione. Scrivi a info@keryxdesign.com per richiedere la cancellazione manuale.', 'bot');
+    addMessage(t.deleteError, 'bot');
   }
 });
 
@@ -421,13 +468,7 @@ input.addEventListener('keydown', (e) => {
 });
 
 function showQuickActions() {
-  const actions = [
-    { label: 'DRD Cartaceo', msg: 'Mi interessa il Direct Response Design cartaceo' },
-    { label: 'Libro per imprenditori', msg: 'Vorrei capire come funziona il servizio libri' },
-    { label: 'Visual Hammer', msg: 'Cosa fate con il Visual Hammer?' },
-    { label: 'Sito web / Landing page', msg: 'Ho bisogno di un sito o una landing page' },
-    { label: 'Ads design', msg: 'Mi servono creativita per le ads' },
-  ];
+  const actions = quickActions;
   const container = document.createElement('div');
   container.className = 'quick-actions';
   container.id = 'quickActions';
@@ -501,7 +542,7 @@ async function send() {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, sessionId })
+      body: JSON.stringify({ message: text, sessionId, lang: navigator.language })
     });
 
     hideTyping();
@@ -512,7 +553,7 @@ async function send() {
     await addBotBubbles(data.reply);
   } catch (err) {
     hideTyping();
-    addMessage("Mi dispiace, ho un problema di connessione. Riprova o scrivici direttamente a info@keryxdesign.com", 'bot');
+    addMessage(t.errorMsg, 'bot');
   }
 
   sendBtn.disabled = false;
@@ -520,7 +561,7 @@ async function send() {
 }
 
 function initChat() {
-  addMessage("Ciao! Sono Kira, l'assistente di Keryx Design. Sono qui per capire cosa stai cercando, cosi Davide puo ricontattarti con le informazioni giuste. Ti faro qualche domanda e alla fine potrai rivedere un riepilogo prima che venga inviato. Che tipo di progetto hai in mente?", 'bot');
+  addMessage(t.welcome, 'bot');
   showQuickActions();
   input.focus();
 }

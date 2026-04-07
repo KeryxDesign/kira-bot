@@ -161,7 +161,7 @@ setInterval(() => {
 }, 60 * 60 * 1000);
 
 app.post("/api/chat", async (req, res) => {
-  const { message, sessionId } = req.body;
+  const { message, sessionId, lang } = req.body;
 
   // Rate limiting
   const ip = req.ip || req.connection.remoteAddress;
@@ -170,17 +170,20 @@ app.post("/api/chat", async (req, res) => {
   }
 
   if (!conversations.has(sessionId)) {
-    conversations.set(sessionId, { messages: [], createdAt: Date.now() });
+    const startLang = /^it\b/i.test(lang || "") ? "italiano" : "English";
+    conversations.set(sessionId, { messages: [], createdAt: Date.now(), lang: startLang });
   }
 
   const conv = conversations.get(sessionId);
   conv.messages.push({ role: "user", content: message });
 
+  const systemWithLang = SYSTEM_PROMPT + `\n\n## Lingua iniziale\nL'utente ha il browser impostato in ${conv.lang}. Inizia la conversazione in ${conv.lang}, poi adattati alla lingua in cui scrive.`;
+
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: systemWithLang,
       messages: conv.messages,
     });
 
