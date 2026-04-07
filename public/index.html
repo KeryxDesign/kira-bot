@@ -309,9 +309,9 @@
 
     .delete-data a:hover { color: var(--accent); }
 
-    /* Responsive */
+    /* Responsive: standalone mode only (not in iframe) */
     @media (min-width: 600px) {
-      body {
+      body:not(.in-iframe) {
         max-width: 480px;
         margin: 20px auto;
         height: calc(100dvh - 40px);
@@ -362,6 +362,11 @@ const sessionId = crypto.randomUUID();
 const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('sendBtn');
+
+// Detect iframe mode
+if (window.self !== window.top) {
+  document.body.classList.add('in-iframe');
+}
 
 // GDPR Consent
 const consentOverlay = document.getElementById('consentOverlay');
