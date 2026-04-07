@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import express from "express";
-import { readFileSync } from "fs";
+import { readFileSync, appendFileSync, existsSync, mkdirSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -151,6 +151,17 @@ Va tutto bene? Se confermi, passo le info a Davide che ti ricontattera entro 24 
 
 Aspetta la conferma prima di dire che e stato inviato. Se vogliono modificare qualcosa, aggiorna il riepilogo.`;
 
+// Conversation logging (persistent, for security monitoring)
+const LOGS_DIR = join(__dirname, "logs");
+if (!existsSync(LOGS_DIR)) mkdirSync(LOGS_DIR);
+
+function logMessage(sessionId, role, content, lang) {
+  const timestamp = new Date().toISOString();
+  const entry = JSON.stringify({ timestamp, sessionId: sessionId.slice(0, 8), role, content, lang }) + "\n";
+  const dateStr = timestamp.slice(0, 10); // YYYY-MM-DD
+  appendFileSync(join(LOGS_DIR, `${dateStr}.jsonl`), entry);
+}
+
 // In-memory conversation store with TTL (GDPR: data minimization)
 const conversations = new Map();
 const CONVERSATION_TTL = 24 * 60 * 60 * 1000; // 24 hours
@@ -181,6 +192,7 @@ app.post("/api/chat", async (req, res) => {
 
   const conv = conversations.get(sessionId);
   conv.messages.push({ role: "user", content: message });
+  logMessage(sessionId, "user", message, conv.lang);
 
   const systemWithLang = SYSTEM_PROMPT + `\n\n## Lingua iniziale\nL'utente ha il browser impostato in ${conv.lang}. Inizia la conversazione in ${conv.lang}, poi adattati alla lingua in cui scrive.`;
 
@@ -194,6 +206,7 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = response.content[0].text;
     conv.messages.push({ role: "assistant", content: reply });
+    logMessage(sessionId, "assistant", reply, conv.lang);
 
     // Keep history manageable (last 40 messages)
     if (conv.messages.length > 40) {
@@ -238,6 +251,43 @@ app.get("/api/admin/conversations", (req, res) => {
   res.json({
     activeSessions: result.length,
     conversations: result,
+  });
+});
+
+// Admin: view conversation logs by date (persistent history)
+app.get("/api/admin/logs/:date?", (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || auth !== `Bearer ${ADMIN_KEY}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const date = req.params.date || new Date().toISOString().slice(0, 10);
+  const logFile = join(LOGS_DIR, `${date}.jsonl`);
+
+  if (!existsSync(logFile)) {
+    return res.json({ date, messages: [] });
+  }
+
+  const lines = readFileSync(logFile, "utf-8").trim().split("\n").filter(Boolean);
+  const messages = lines.map(l => JSON.parse(l));
+
+  // Group by session
+  const sessions = {};
+  for (const msg of messages) {
+    if (!sessions[msg.sessionId]) {
+      sessions[msg.sessionId] = { sessionId: msg.sessionId, lang: msg.lang, messages: [] };
+    }
+    sessions[msg.sessionId].messages.push({
+      time: msg.timestamp,
+      role: msg.role,
+      content: msg.content,
+    });
+  }
+
+  res.json({
+    date,
+    totalMessages: messages.length,
+    sessions: Object.values(sessions),
   });
 });
 
