@@ -309,6 +309,16 @@
 
     .delete-data a:hover { color: var(--accent); }
 
+    /* AI disclosure banner */
+    .ai-disclosure {
+      background: var(--gray-100);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 6px 20px;
+      font-size: 11px;
+      color: var(--gray-600);
+      text-align: center;
+    }
+
     /* Responsive: standalone mode only (not in iframe) */
     @media (min-width: 600px) {
       body:not(.in-iframe) {
@@ -345,6 +355,8 @@
     </div>
     <div class="header-badge">Online</div>
   </div>
+
+  <div class="ai-disclosure">Stai parlando con un assistente AI, non con una persona.</div>
 
   <div class="chat" id="chat"></div>
 
