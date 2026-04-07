@@ -214,6 +214,33 @@ app.delete("/api/chat/:sessionId", (req, res) => {
   res.json({ deleted: true });
 });
 
+// Admin: view all active conversations (protected)
+const ADMIN_KEY = process.env.ADMIN_KEY || "kira-admin-change-me";
+
+app.get("/api/admin/conversations", (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || auth !== `Bearer ${ADMIN_KEY}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const result = [];
+  const now = Date.now();
+  for (const [id, conv] of conversations) {
+    result.push({
+      sessionId: id.slice(0, 8) + "...",
+      lang: conv.lang,
+      messageCount: conv.messages.length,
+      ageMinutes: Math.round((now - conv.createdAt) / 60000),
+      messages: conv.messages,
+    });
+  }
+
+  res.json({
+    activeSessions: result.length,
+    conversations: result,
+  });
+});
+
 const PORT = process.env.PORT || 3456;
 app.listen(PORT, () => {
   console.log(`Kira bot running at http://localhost:${PORT}`);
